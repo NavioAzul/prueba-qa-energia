@@ -1,6 +1,6 @@
 # Pendientes — Prueba técnica · QA (EnergIA)
 
-> Última actualización: **Oct 20 2026** · Regla: PENDIENTES = solo lo que falta. Lo cerrado se marca `[x]` con la evidencia; el detalle largo va al `qa/01-plan-de-pruebas.md` y a `qa/evidencias/`.
+> Última actualización: **Oct 22 2026** · Regla: PENDIENTES = solo lo que falta. Lo cerrado se marca `[x]` con la evidencia; el detalle largo va al `qa/01-plan-de-pruebas.md` y a `qa/evidencias/`.
 >
 > **Entrega: 2 días calendario.** Recibida Oct 20 → **vence Oct 22**. El video (máx. 15 min) se graba al final, con todo ya reproducible.
 
@@ -26,16 +26,16 @@
 
 | # | Entregable | Estado | DoD (cuándo está listo) |
 |---|---|---|---|
-| 1 | `qa/01-plan-de-pruebas.md` | [ ] | Alcance + riesgos + tipos + criterios entrada/salida + **resumen ejecutivo** al final |
-| 2 | `qa/02-smoke.md` | [ ] | Casos mínimos + **por qué** cada uno + resultado de ejecutarlos |
-| 3 | `qa/03-casos-caja-negra.md` | [ ] | **15–25 casos**, con técnicas nombradas y estado |
-| 4 | `qa/04-caja-blanca.md` | [ ] | **≥2 módulos** revisados + juicio sobre los tests existentes + tests propuestos |
-| 5 | `qa/05-defectos.md` | [ ] | **≥2 defectos** completos (o 1 issue de GitHub por defecto) |
-| 6 | `qa/evidencias/` | [ ] | Capturas/video/curl por cada defecto, con nombre `BUG-0X_*` |
-| 7 | `e2e/README.md` | [ ] | **Un solo comando** para instalar y correr |
-| 8 | `e2e/playwright.config.ts` + `tests/` | [ ] | 1 flujo E2E de negocio + 1 test del defecto |
-| 9 | **Video** (≤15 min) | [ ] | Enlace en el README de entrega |
-| 10 | README de entrega | [ ] | Enlace al video + cómo correr todo + declaración de uso de IA |
+| 1 | `qa/01-plan-de-pruebas.md` | [x] · `qa/01-plan-de-pruebas.md` | Alcance + riesgos + tipos + criterios entrada/salida + **resumen ejecutivo** al final |
+| 2 | `qa/02-smoke.md` | [x] · `qa/02-smoke.md` | Casos mínimos + **por qué** cada uno + resultado de ejecutarlos |
+| 3 | `qa/03-casos-caja-negra.md` | [x] · `qa/03-casos-caja-negra.md` | **15–25 casos**, con técnicas nombradas y estado |
+| 4 | `qa/04-caja-blanca.md` | [x] · `qa/04-caja-blanca.md` | **≥2 módulos** revisados + juicio sobre los tests existentes + tests propuestos |
+| 5 | `qa/05-defectos.md` | [x] · `qa/05-defectos.md` | **≥2 defectos** completos (o 1 issue de GitHub por defecto) |
+| 6 | `qa/evidencias/` | [x] · `qa/evidencias/README.md` (índice de 12 archivos) | Capturas/video/curl por cada defecto, con nombre `BUG-0X_*` |
+| 7 | `e2e/README.md` | [x] · `e2e/README.md` | **Un solo comando** para instalar y correr |
+| 8 | `e2e/playwright.config.ts` + `tests/` | [x] · `e2e/playwright.config.ts` · `e2e/tests/` (4 passed, 1 falla esperada) | 1 flujo E2E de negocio + 1 test del defecto |
+| 9 | **Video** (≤15 min) | [ ] PENDIENTE — enlace de video | Enlace en el README de entrega |
+| 10 | README de entrega | [x] · `README.md` § Entrega QA (sólo falta pegar el enlace del video, fila 9) | Enlace al video + cómo correr todo + declaración de uso de IA |
 
 ---
 
@@ -55,16 +55,16 @@
 - [ ] **Decisión de producto declarada por escrito** cuando algo sea ambiguo (el enunciado lo premia explícitamente).
 - [ ] **Matriz de trazabilidad** (va dentro de `01-plan-de-pruebas.md`): cada riesgo → sus casos → sus defectos. Demuestra que el diseño de casos respondió al riesgo, no al azar.
 
-| Riesgo | Casos que lo cubren | Defecto encontrado |
-|---|---|---|
-| R1 · Motor clasifica mal → operador actúa sobre el medidor equivocado | CN-01…CN-04, CN-12 | BUG-01, BUG-02, BUG-03 |
-| R2 · Calidad de datos confundida con anomalía real | CN-05, CN-06 | — |
-| R3 · Auth/JWT: acceso indebido o sesión que no expira | CN-13, CN-14, CN-19 | BUG-05 (bearer), BUG-07 (logout) |
-| R4 · Zona horaria America/Bogota | CN-15, CN-16, E2E-03 | BUG-06 |
-| R5 · Contrato API ↔ UI ↔ docs | CN-07, CN-08, CN-17 | BUG-01, BUG-05 |
-| R6 · Paginación / filtros / búsqueda | CN-09, CN-10, CN-11 | BUG-03, BUG-04, BUG-05 |
+| Defecto | Severidad / Prioridad | Riesgo | Caso o test que lo detecta | Evidencia |
+|---|---|---|---|---|
+| BUG-01 · El tablero cuenta como alerta un falso positivo (`8/2/2` frente a `9/1/2`) | S2 / P2 | R1 | SM-04, CN-11 | `qa/evidencias/api/BUG-01_status-counts.md` · `qa/evidencias/BUG-01_status-counts-dashboard.png` |
+| BUG-02 · La paginación del libro no tiene página 2 (M-111/M-112 inalcanzables) | S2 / P1 | R6 | SM-05, E2E-01 | `qa/evidencias/BUG-02_paginacion-sin-pagina-2.png` |
+| BUG-03 · El filtro «Normales» esconde el falso positivo M-106 | S3 / P2 | R2 | CN-11 | `qa/evidencias/api/BUG-03_falso-positivo-fuera-de-normales.md` · `qa/evidencias/BUG-03_falso-positivo-fuera-de-normales.png` |
+| BUG-04 · `page: -1` produce un 500 en lugar de un 400 | S2 / P1 | R6 | CN-05 | `qa/evidencias/api/BUG-04_page-negativo-500.md` |
+| BUG-05 · «3 órdenes abiertas» sobre cuatro tarjetas renderizadas | S3 / P3 | R5 | SM-04 (observación directa, no asertada) | `qa/evidencias/BUG-05_ordenes-abiertas-vs-tarjetas.png` |
+| BUG-06 · La hora de planta se muestra en la zona del navegador (`12/09 09:00` frente a `12/09 14:00`) | S2 / P1 | R4 | CN-15, E2E-02 | `qa/evidencias/BUG-06_hora-de-planta-desfasada.png` · `e2e/tests/e2e-02-bug-06-zona-horaria.spec.ts` |
 
-> Los IDs de caso se numeran recién al escribir `03-casos-caja-negra.md`; esta tabla se corrige al final para que coincida. Una matriz desactualizada es peor que no tener matriz.
+> Matriz conciliada con `qa/05-defectos.md`: seis defectos confirmados, una fila por defecto. La trazabilidad completa riesgo → casos vive en `qa/01-plan-de-pruebas.md` § Matriz de trazabilidad. No existe `BUG-07`; `BUG-05` aparece una sola vez y su detección es la observación directa de SM-04.
 
 ---
 
@@ -161,11 +161,26 @@
 
 ### 🎥 Video y cierre
 
-- [ ] Guion de ≤15 min: estrategia (2–3) → casos clave (4–5) → **reproducir 2–3 defectos en vivo** (4–5) → correr Playwright (2) → resumen ejecutivo (1).
+> **Enlace de video: PENDIENTE — enlace de video.**
+> El video no está grabado todavía. Es el único entregable abierto; no se declara duración hasta tenerlo. Cuando exista, el enlace se pega en esta línea y en `README.md` § Entrega QA, y se verifica que abra.
+
+**Guion de grabación (objetivo ≤10 min; techo duro 15 min).** Grabar en este orden, sin edición; cada bloque usa evidencia ya commiteada.
+
+| Orden | Qué mostrar | Tiempo objetivo | Evidencia |
+|---|---|---|---|
+| 1 | Estrategia: alcance, riesgos R1–R6 y por qué el veredicto es NO-GO | 1,5 min | `qa/01-plan-de-pruebas.md` |
+| 2 | Tablero: BUG-01 en vivo, `8 normales · 2 alerta · 2 críticas` frente a `9/1/2` | 1,5 min | `qa/evidencias/BUG-01_status-counts-dashboard.png` |
+| 3 | Libro de medidores: BUG-02, `1–10 de 12` con `Siguiente` deshabilitado y M-111/M-112 inalcanzables | 1,5 min | `qa/evidencias/BUG-02_paginacion-sin-pagina-2.png` |
+| 4 | Anomalías: BUG-06, «Detectada» `12/09 09:00` frente a `12/09 14:00` | 1,5 min | `qa/evidencias/BUG-06_hora-de-planta-desfasada.png` |
+| 5 | API con curl: BUG-04, `pagination.page = -1` → `HTTP/1.1 500` donde se espera `400` | 1 min | `qa/evidencias/api/BUG-04_page-negativo-500.md` |
+| 6 | Playwright: `cd e2e && pnpm exec playwright test` → `4 passed` con 1 falla esperada | 2 min | `e2e/README.md` |
+| 7 | Cierre: bloqueadores BUG-02/04/06, riesgo residual y qué falta corregir | 1 min | `qa/01-plan-de-pruebas.md` § Veredicto |
+
+- [x] Guion de ≤15 min definido → tabla anterior (objetivo ≤10 min).
 - [ ] Subir a YouTube no listado / Loom / Drive y pegar el enlace en el README de entrega.
-- [ ] **Resumen ejecutivo (½ página)**: ¿liberarías este build a producción? ¿Por qué? ¿Qué riesgos quedan abiertos?
-- [ ] Declaración de uso de IA: **para qué** la usé y **cómo** verifiqué sus hallazgos (lo valoran, no lo penalizan).
-- [ ] Verificar que el repo compartido tenga: `qa/`, `e2e/`, README con video, **sin** cambios en el código de la app.
+- [x] **Resumen ejecutivo (½ página)**: veredicto NO-GO y riesgos abiertos en `qa/01-plan-de-pruebas.md`.
+- [x] Declaración de uso de IA: `README.md` § Entrega QA (qué hizo la IA y cómo se verificó cada artefacto).
+- [ ] Verificar que el repo compartido tenga: `qa/`, `e2e/`, README con video, **sin** cambios en el código de la app. (Falta el enlace del video.)
 
 ---
 
@@ -209,4 +224,4 @@
 | Fecha | Qué se hizo | Evidencia |
 |---|---|---|
 | Oct 20 | Documento creado. Repo no encontrado localmente; Docker OK, Go ausente. | este archivo |
-| | | |
+| Oct 22 | Matriz de defectos conciliada con `qa/05-defectos.md`: seis filas confirmadas; se eliminó el `BUG-07` inventado y la atribución duplicada de `BUG-05`. Se corrigió el comando de tests del backend: `docker compose exec backend go test ./...` falla en la imagen distroless (sin Go) y se reemplazó por `docker run … golang:1.26-alpine go test ./...`, ejecutado con salida real. | `qa/05-defectos.md` · `qa/04-caja-blanca.md` · `README.md` § Entrega QA |
