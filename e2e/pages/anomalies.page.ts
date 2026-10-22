@@ -25,8 +25,13 @@ export class AnomaliesPage {
     return this.table.getByRole('link', { name: /^M-\d{3}$/ })
   }
 
+  /**
+   * Enlace del identificador. Definido desde `page` porque se usa como
+   * localizador interno de `filter({ has })`, que lo consulta relativo a la
+   * fila (ver la misma nota en `meters.page.ts`).
+   */
   meterLink(meterId: string): Locator {
-    return this.table.getByRole('link', { name: meterId, exact: true })
+    return this.page.getByRole('link', { name: meterId, exact: true })
   }
 
   rowFor(meterId: string): Locator {

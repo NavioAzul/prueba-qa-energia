@@ -8,7 +8,7 @@ import { paths } from '../config/env'
  * Nota sobre las filas: el encabezado también es un `role="row"`, así que las
  * filas de datos se distinguen por contener un `rowheader` (la celda
  * `<th scope="row">` del medidor). Es una distinción semántica, no posicional:
- * no hay `nth()` ni `nth-child` en ningún lado.
+ * no hay selectores por índice ni rutas CSS/XPath frágiles en ningún lado.
  */
 export class MetersPage {
   readonly table
@@ -44,9 +44,14 @@ export class MetersPage {
     return this.rows().filter({ has: this.meterLink(meterId) })
   }
 
-  /** Enlace del identificador dentro de la tabla. */
+  /**
+   * Enlace del identificador. Se define desde `page` (no desde `table`) porque
+   * se usa como localizador interno de `filter({ has })`, que lo consulta
+   * **relativo a la fila**: una cadena encadenada desde la tabla exigiría una
+   * tabla dentro de la fila y no encontraría nada.
+   */
   meterLink(meterId: string): Locator {
-    return this.table.getByRole('link', { name: meterId, exact: true })
+    return this.page.getByRole('link', { name: meterId, exact: true })
   }
 
   /** Pestaña de estado dentro del grupo "Estado". */
