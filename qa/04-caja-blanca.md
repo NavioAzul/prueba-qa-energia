@@ -11,7 +11,7 @@ El backend se ejecuta en un contenedor de un solo uso. La imagen de ejecución d
 distroless y no lleva Go, así que la suite **no** puede correr dentro del contenedor de la aplicación:
 
 ```bash
-cd /Users/calderonjosue_/energy-ai
+cd energy-ai
 docker compose exec backend go test ./...
 ```
 
@@ -198,10 +198,10 @@ escalar"): NORMAL». La rama que implementaría esa promesa **no existe**: un `F
 severidad `LOW` cae en `default` y se devuelve `ALERT`. Las tres ramas del `switch` están ejecutadas
 por los tests, así que no hay una sola sentencia sin cubrir que delate el problema. Es la
 demostración de que «la suite está en verde» y «el comportamiento es correcto» son afirmaciones
-independientes: la cobertura de sentencias es **estructuralmente incapaz** de detectar una rama que
+distintas: la cobertura de sentencias es **estructuralmente incapaz** de detectar una rama que
 falta.
 
-El mismo patrón aparece en `backend/internal/meter/dto.go:27-30`, que documenta la búsqueda como «coincidencia parcial y sin
+El mismo patrón aparece en `backend/internal/meter/dto.go:26`, que documenta la búsqueda como «coincidencia parcial y sin
 importar mayúsculas», mientras `backend/internal/meter/service.go:59` compara con `strings.Contains(sm.MeterID, search)` sin
 normalizar. La línea que debería normalizar no existe, y por eso el caso CN-07 encuentra 0 filas
 donde el contrato promete 1. Se registra aquí como rama ausente (no como línea sin cubrir): ninguna

@@ -6,7 +6,7 @@ identificación, severidad, prioridad, entorno, precondición, pasos, datos, esp
 obtenido, evidencia y causa raíz probable, más la propuesta de detección automática.
 
 **Convenciones.** Severidad (`S1` bloqueante … `S4` cosmético) mide impacto en usuario o negocio;
-prioridad (`P1` inmediata … `P4` baja) mide urgencia de corrección. Son ejes independientes y, cuando
+prioridad (`P1` inmediata … `P4` baja) mide urgencia de corrección. Son ejes distintos y, cuando
 divergen, la divergencia se explica en una línea. Ningún defecto se declara sin reproducción real.
 
 **Entorno común.** macOS 26.5 (arm64) · `TZ America/Bogota` · commit `15765d9` · API directa en
@@ -36,9 +36,9 @@ divergencias no promovidas» y no se citan como bloqueadores.
   2. Leer el bloque "Estado de la planta" del tablero de despacho.
 - **Datos usados**: dataset de 12 medidores y 14 días; 4 anomalías (M-109, M-112, M-104, M-106).
 - **Esperado**: `status_counts = {normal: 9, alert: 1, critical: 2}`. Oráculo: `backend/README.md:24`
-  ("Los otros 8 medidores no generan alertas", sobre 12 medidores con 4 anomalías) y
-  `backend/README.md:105` (`FALSE_POSITIVE` → `NORMAL`); M-106 es `FALSE_POSITIVE`
-  (`backend/README.md:22`).
+  ("Los otros 8 medidores no generan alertas") sobre los 12 medidores del dataset
+  (`backend/README.md:380`) con las 4 anomalías de la tabla `:17-22`, y `backend/README.md:105`
+  (`FALSE_POSITIVE` → `NORMAL`); M-106 es `FALSE_POSITIVE` (`backend/README.md:22`).
 - **Obtenido**: `status_counts = {normal: 8, alert: 2, critical: 2}` en `GET /api/v1/dashboard/getSummary`
   (`HTTP 200`) y el mismo desglose en pantalla: `8 normales · 2 alerta · 2 críticas`. El reparto
   correcto exige 9 normales porque M-106, siendo falso positivo, debe contarse como normal.
@@ -132,8 +132,8 @@ divergencias no promovidas» y no se citan como bloqueadores.
 - **Datos usados**: 12 medidores, `PAGE_SIZE = 10`.
 - **Esperado**: dos páginas con `Siguiente` habilitado en la primera, rango `1–10 de 12 medidores` y
   acceso a `11–12 de 12`. Oráculo: `backend/README.md:80` (la lista "sin body devuelve la página 1 de
-  10" sobre 12 medidores documentados en `backend/README.md:24`), el texto que la propia UI imprime
-  (`1–10 de 12 medidores`) y el estándar de la industria: el número de páginas de una lista paginada
+  10" sobre los 12 medidores documentados en `backend/README.md:380`), el texto que la propia UI
+  imprime (`1–10 de 12 medidores`) y el estándar de la industria: el número de páginas de una lista paginada
   es `ceil(total / tamaño)`, no `floor`.
 - **Obtenido**: 10 filas (`M-101`…`M-110`), rango literal `1–10 de 12 medidores`, `Anterior`
   deshabilitado y **`Siguiente` deshabilitado**. `M-111` y `M-112` no aparecen en ninguna página;
@@ -262,7 +262,7 @@ obliga a igualar. Se listan con la evidencia negativa que impidió confirmarlos.
   `evidence.change.change_pct = 46.517` (ventana sostenida); el libro muestra `+47,3 %` y corresponde
   a `variation_pct = 47.27` (24 h contra baseline). Ambos valores salen de la misma respuesta de la API.
 - **Por qué no se confirma**: son dos medidas diferentes y ambas están documentadas
-  (`backend/README.md:110` define la variación del libro; `:319-325` describe el cambio sostenido). No
+  (`backend/README.md:109` define la variación del libro; `:319-325` describe el cambio sostenido). No
   hay contradicción, sino dos ventanas distintas.
 
 ### H3 · El total de paginación se calcula sobre la página (descartada)
@@ -272,14 +272,14 @@ obliga a igualar. Se listan con la evidencia negativa que impidió confirmarlos.
   `{"page":99,"size":10,"count":12,"rows":[]}`; `E2E-03` pide la página 2 y también recibe
   `count: 12` con dos filas. El total es del conjunto completo (`backend/internal/httpx/paging.go:53`).
 - **Por qué no se confirma**: la hipótesis es falsa; se conserva aquí porque estaba en el tablero de
-  pendientes y su descarte es parte del resultado.
+  planificación y su descarte es parte del resultado.
 
 ### Divergencia confirmada fuera del registro · la búsqueda distingue mayúsculas
 
 - **Qué se observó**: `CN-07` busca `m-109` en el libro y obtiene 0 filas («Ningún medidor coincide
   con los filtros»); la misma consulta a la API (`filter.meter_id: "m-109"`) responde `count: 0`.
   El contrato publicado promete lo contrario: Swagger `/docs/openapi.json` documenta «Coincidencia
-  parcial y sin importar mayúsculas» y `backend/internal/meter/dto.go:27-30` lo repite.
+  parcial y sin importar mayúsculas» y `backend/internal/meter/dto.go:26` lo repite.
 - **Por qué no se promovió a defecto**: el registro de defectos se cerró con seis casos reproducidos
   antes de la fase de casos y este documento no se reabre en esta entrega. La divergencia queda
   registrada en `qa/03-casos-caja-negra.md` (CN-07, `FALLA`) y en `qa/01-plan-de-pruebas.md` como

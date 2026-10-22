@@ -4,8 +4,9 @@
 autenticación, las tres pantallas que concentran el valor del producto (despacho, libro de
 medidores, anomalías), el disparo de Run AI Analysis y un control negativo de API.
 
-**Línea base.** SHA `15765d9`, HEAD de entrega `22b4c85`, Chromium 156.0.8078.4 (Playwright),
-viewport 1440×900, `TZ America/Bogota`. Detalle completo en `qa/evidencias/README.md`.
+**Línea base.** SHA de la aplicación `15765d9` (congelado durante toda la ejecución), Chromium
+156.0.8078.4 (Playwright), viewport 1440×900, `TZ America/Bogota`. Detalle completo en
+`qa/evidencias/README.md`.
 
 **Condición de entrada.** Stack arriba según `docker compose ps`, las tres superficies
 respondiendo `200` y navegador disponible (§2–§4 de `qa/evidencias/README.md`).

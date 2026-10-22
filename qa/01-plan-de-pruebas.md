@@ -1,12 +1,12 @@
 # Plan de pruebas · EnergIA
 
-**Alcance.** Verificar el build del SHA `15765d9` en cuatro frentes: humo de entorno, caja negra sobre
-API y UI, caja blanca de dos módulos del backend y una suite Playwright de negocio. Este plan responde una
-pregunta: si el build puede liberarse. Con un día de presupuesto, la prioridad se fija por riesgo.
+**Alcance.** Verificar el build `15765d9` en cuatro frentes: humo de entorno, caja negra sobre
+API y UI, caja blanca de dos módulos del backend y una suite Playwright de negocio. El plan responde
+si el build puede liberarse, con prioridad por riesgo y un día de presupuesto.
 
 **Fuera de alcance.** Carga, seguridad ofensiva, accesibilidad, matriz de navegadores (sólo
 Chromium), integración continua y cualquier corrección del código: `backend/` y `frontend/` están
-congelados y su integridad es condición de la entrega.
+congelados y su integridad condiciona la entrega.
 
 ## Riesgos priorizados
 
@@ -40,9 +40,9 @@ congelados y su integridad es condición de la entrega.
 ## Criterios de salida
 
 1. Humo ejecutado con veredicto explícito y fallas conservadas.
-2. 18 casos de caja negra ejecutados, sin `pendiente` ni `NA`.
+2. 18 casos de caja negra ejecutados, sin diferidos ni `NA`.
 3. Ningún defecto `S1` abierto y ningún `S2` con prioridad `P1` abierto.
-4. Dos veredictos de suite emitidos y tres tests propuestos fuera del árbol de la aplicación.
+4. Dos veredictos de suite y tres tests propuestos fuera del árbol de la aplicación.
 
 ## Matriz de trazabilidad
 
@@ -57,7 +57,7 @@ congelados y su integridad es condición de la entrega.
 
 Los seis defectos quedan cubiertos: cuatro por caja negra, BUG-02 por `SM-05` y BUG-05 por observación en
 `SM-04`. CN-07 detectó además una divergencia no promovida —la búsqueda distingue mayúsculas contra el
-Swagger— que queda como riesgo residual de R5.
+Swagger—, riesgo residual de R5.
 
 ## Resumen de ejecución
 
@@ -70,20 +70,22 @@ Swagger— que queda como riesgo residual de R5.
 | Playwright | 2 tests + API | 3 archivos de spec | 4 tests verdes con 1 falla esperada |
 
 **Desviaciones y su causa.** `e2e-03-api-contrato.spec.ts` **no se recortó**: CP2 llegó con holgura y
-el test de contrato quedó verde; la suite entrega tres specs más el proyecto de autenticación. El humo se
-ejecutó con navegador real automatizado desde `/tmp`, con resultados idénticos a una caminata manual.
-`run.sh` usa `jq`, según la convención del repositorio. CN-07 falla por una divergencia observada aquí, no
-promovida a defecto para no alterar el registro de seis.
+quedó verde, así que la suite entrega tres specs y el proyecto de autenticación. El humo se ejecutó
+con navegador automatizado desde `/tmp`, con resultados idénticos a una caminata manual. `run.sh` usa
+`jq` por convención del repositorio. CN-07 falla por una divergencia no promovida, para no alterar el
+registro de seis.
 
 **Riesgo residual.** No se ejercieron `FAILED` ni el timeout de dos minutos; la búsqueda sensible a mayúsculas afecta a quien
-escribe en minúsculas; BUG-05 no tiene detección automática.
+escribe en minúsculas; BUG-05 no está automatizado.
 
 ## Veredicto
 
 **NO-GO.** Bloquean la liberación **BUG-02**, **BUG-04** y **BUG-06**: los tres son `S2/P1` y cada uno
 rompe un criterio distinto — datos inalcanzables, error de servidor ante entrada no confiable y marcas
 de tiempo desplazadas cinco horas. BUG-01, BUG-03 y BUG-05 no bloquean, pero deben corregirse en el
-mismo ciclo por compartir causa o contradecir la documentación.
+mismo ciclo por compartir causa o contradecir la documentación. El resto del build se sostiene —humo
+8 de 10, caja negra 14 de 18— y los tres bloqueadores son cambios locales cubiertos por los tests
+entregados.
 
 ## Integridad del árbol (INT-1)
 
@@ -103,4 +105,4 @@ git status --porcelain backend frontend
 
 ```
 
-Ambos se ejecutaron en el HEAD de entrega y no reportan ninguna línea.
+Ambos en el HEAD de entrega: ninguna línea.

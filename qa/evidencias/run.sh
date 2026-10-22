@@ -4,9 +4,11 @@
 #   bash qa/evidencias/run.sh            # todos los casos
 #   bash qa/evidencias/run.sh BUG-04     # un solo caso
 #
-# El token se pide en tiempo de ejecución y vive sólo en la variable TOKEN;
-# este archivo no contiene ninguna credencial literal. No se usa `set -x`
-# justamente para no volcar el token en la salida.
+# El token se pide en tiempo de ejecución y vive sólo en la variable TOKEN:
+# este archivo no contiene ningún token literal. Sí lleva embebida la cuenta
+# demo de la evaluación (admin@energia.local), la única credencial pública del
+# enunciado; no se usa ningún secreto real. No se usa `set -x` justamente para
+# no volcar el token en la salida.
 #
 # Convención de salida: los casos BUG-0X comparan contra el CONTRATO, no contra
 # el comportamiento actual. Mientras el defecto exista el script termina con

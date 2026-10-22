@@ -100,7 +100,7 @@ El servidor construye las imágenes, así que no hace falta un registro como Doc
 ## Tests
 
 ```bash
-# backend
+# backend (sin Go en el host: ver § Tests del backend en contenedor)
 cd backend
 go test ./...
 

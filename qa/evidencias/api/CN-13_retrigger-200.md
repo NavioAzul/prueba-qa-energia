@@ -1,7 +1,7 @@
 ### CN-13 · Segundo disparo mientras el análisis sigue en curso
 
 - **Commit**: `15765d9` · **Fecha**: 2026-10-22 12:42 (America/Bogota)
-- **Oráculo**: `backend/README.md` §Run AI Analysis y `backend/internal/ai/handler.go:34-37` — el primer disparo responde `202`; si ya hay un análisis corriendo, el segundo responde `200` con **el mismo** run, nunca un segundo job concurrente.
+- **Oráculo**: `backend/README.md` §Run AI Analysis y `backend/internal/ai/handler.go:34-37` — la invariante es que **nunca corre un segundo análisis concurrente**: el disparo que encuentra el job en curso responde con **el mismo** run. El reparto entre `202` (el disparo que abre el run) y `200` (los que lo encuentran corriendo) depende del timing y varía entre corridas.
 
 #### Request
 
@@ -81,4 +81,4 @@ El orden de las respuestas varía entre ejecuciones; lo relevante es que **un so
 
 #### Veredicto
 
-`202` para un disparo y `200` con el mismo `AN-0006` para los concurrentes: no se creó un segundo análisis y el contrato de idempotencia se cumple. **Coincide con el oráculo.**
+Las seis respuestas comparten `AN-0006`: no se creó un segundo análisis y el contrato de idempotencia se cumple. El reparto `202`/`200` de esta corrida es una muestra sujeta al timing; la invariante —un solo run, nunca dos concurrentes— es la que coincide con el oráculo.

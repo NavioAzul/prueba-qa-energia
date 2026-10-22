@@ -96,7 +96,7 @@ de estado · negativa · consistencia entre capas. Cada `**Técnica**` declara u
 - **Precondición**: sesión iniciada; `/medidores` con los 12 medidores.
 - **Pasos**: 1. Escribir `m-109` en el campo *Medidor*. 2. Pulsar *Buscar medidor*. 3. Leer el resultado.
 - **Datos**: término `m-109` (misma cadena que el ID, en minúsculas). Clases de entrada del campo: exacta, parcial, en minúsculas, inexistente.
-- **Esperado**: 1 fila, M-109: la búsqueda es parcial y **sin distinguir mayúsculas** (oráculo: Swagger `/docs/openapi.json`, `Filter.meter_id` → «Coincidencia parcial y sin importar mayúsculas: "109" encuentra M-109»; el mismo contrato está en `backend/internal/meter/dto.go:27-30`).
+- **Esperado**: 1 fila, M-109: la búsqueda es parcial y **sin distinguir mayúsculas** (oráculo: Swagger `/docs/openapi.json`, `Filter.meter_id` → «Coincidencia parcial y sin importar mayúsculas: "109" encuentra M-109»; el mismo contrato está en `backend/internal/meter/dto.go:26`).
 - **Obtenido**: 0 filas con URL `?medidor=m-109`; la tabla muestra «Ningún medidor coincide con los filtros · No hay medidores que contengan "m-109"». La misma consulta contra la API (`filter.meter_id: "m-109"`) responde `200` con `count: 0`.
 - **Estado**: FALLA → divergencia **no promovida a defecto** en esta entrega: `backend/internal/meter/service.go:59` usa `strings.Contains` sobre el ID sin normalizar, mientras el contrato publicado promete insensibilidad a mayúsculas. Se registra aquí y en el riesgo residual de `qa/01-plan-de-pruebas.md`; el registro `qa/05-defectos.md` se mantiene con los seis defectos reproducidos en la ejecución anterior.
 
@@ -194,9 +194,20 @@ IDLE ──POST /ai/analyze──▶ RUNNING ──(el motor termina)──▶ C
 - **Precondición**: `IDLE`; se disparan cinco peticiones simultáneas.
 - **Pasos**: 1. Lanzar 5 `POST /api/v1/ai/analyze` en paralelo. 2. Comparar estados HTTP e `id` de las cinco respuestas.
 - **Datos**: cinco hilos concurrentes con el mismo token; el motor completa en ~25 ms, así que la concurrencia debe ser real.
-- **Esperado**: una sola creación — un `202` y el resto `200` — todas con el mismo `id` (oráculo: Swagger `POST /ai/analyze` → `200 «Ya había un análisis en curso»` y spec CN-3).
-- **Obtenido**: un `202` y cuatro `200`; las cinco respuestas con `id: AN-0008`, `status: RUNNING`. Evidencia de la misma regla en la ejecución anterior: `qa/evidencias/api/CN-13_retrigger-200.md` (202 + cinco 200, todas `AN-0006`).
-- **Estado**: PASA
+- **Esperado**: una sola ejecución concurrente — todas las respuestas con el mismo `id` y ninguna que
+  abra un segundo run. La invariante es que `Start()` toma `s.mu`, devuelve el run en curso si existe
+  y sólo crea uno cuando está libre, y que `finish()` limpia `s.running` bajo el mismo mutex
+  (`backend/internal/ai/service.go:71-82` y `:280-289`), de modo que **dos runs nunca se solapan**. El
+  reparto exacto entre `202` y `200` depende del instante en que llega cada petición —varía con el
+  timing— y no forma parte del contrato (oráculo: Swagger `POST /ai/analyze` → `200 «Ya había un
+  análisis en curso»` y spec CN-3).
+- **Obtenido**: cinco respuestas, todas con `id: AN-0008`, `status: RUNNING` (en esa corrida, un `202`
+  y cuatro `200`); ningún run se solapó con otro. Evidencia de la misma invariante en la ejecución
+  anterior: `qa/evidencias/api/CN-13_retrigger-200.md` (`AN-0006`, con `202` en el disparo que abrió
+  el run y `200` en los concurrentes; el reparto varía entre corridas).
+- **Estado**: PASA — la invariante se cumple: un solo run vivo, `Start()`/`finish()` mutuamente
+  excluyentes y ningún segundo job concurrente. La pareja `202`/`200` es una muestra sujeta al
+  timing, no un resultado fijo.
 
 **Estados no ejercitados y por qué**: `FAILED` requiere inducir un fallo del motor o del narrador, y
 el servicio no expone una palanca de inyección; el timeout de `runTimeout = 2 * time.Minute`
