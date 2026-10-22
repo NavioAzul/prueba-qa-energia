@@ -12,9 +12,11 @@ divergen, la divergencia se explica en una línea. Ningún defecto se declara si
 **Entorno común.** macOS 26.5 (arm64) · `TZ America/Bogota` · commit `15765d9` · API directa en
 `http://localhost:8080` y UI en `http://localhost:3000`.
 
-**Estado del informe.** Tres defectos confirmados en este documento (`BUG-01`, `BUG-03`, `BUG-04`).
-Los hallazgos de UI y zona horaria se agregan en la misma revisión; los candidatos no reproducidos se
-separan en la sección de hipótesis.
+**Estado del informe.** Seis defectos confirmados (`BUG-01` … `BUG-06`), uno por cada encabezado
+`### BUG-` de este documento: tres de API (`BUG-01`, `BUG-03`, `BUG-04`) y tres de UI (`BUG-02`,
+`BUG-05`, `BUG-06`). Los seis se reprodujeron sobre `15765d9` y ninguno se cuenta sin reproducción;
+los candidatos que no se pudieron confirmar quedan separados en la sección final «Hipótesis y
+divergencias no promovidas» y no se citan como bloqueadores.
 
 ---
 
@@ -230,3 +232,57 @@ son distintos: un número agregado contra `backend/README.md:24` frente a una fi
 `backend/README.md:105`. La causa compartida está declarada en ambas entradas, de modo que un revisor
 puede fusionarlas en una sola corrección sin perder información; fusionarlas en el informe habría
 ocultado que el mismo error produce dos fallas verificables en pantallas diferentes.
+
+---
+
+## Hipótesis y divergencias no promovidas
+
+Candidatos observados durante la ejecución que **no** se cuentan entre los seis defectos: o no se
+pudieron confirmar contra un oráculo, o describen dos medidas distintas que la documentación no
+obliga a igualar. Se listan con la evidencia negativa que impidió confirmarlos.
+
+### H1 · La corriente de M-109 se reporta como `+109,9 %` y como `+105,6 %`
+
+- **Qué se intentó**: verificar el valor de corriente que cita `backend/README.md:333` («la corriente
+  subió de 195,9 a 411,1 A (+109,9 %)») contra las dos superficies que la muestran.
+- **Qué se observó (evidencia negativa)**: `GET /meter/getById/M-109` devuelve
+  `electrical.current_a = {value: 402.78, baseline: 195.88, change_pct: 105.63}`, mientras la
+  evidencia de `GET /anomaly/getAll` para el mismo medidor devuelve
+  `current_a.change_pct = 109.858` sobre `observed: 411.07`. La UI del detalle muestra `+105,6 %`.
+- **Por qué no se confirma**: cada superficie compara una referencia distinta —la última lectura
+  (402,78 A) frente al valor representativo de la ventana (411,07 A)—. Ningún documento define cuál
+  de las dos debe ver el operador, así que no hay oráculo que se incumpla. Queda como observación de
+  coherencia de producto, no como defecto.
+
+### H2 · La variación de M-104 aparece como `+46,5 %` en el texto y `+47,3 %` en el libro
+
+- **Qué se intentó**: comparar el texto que genera el motor para la orden de M-104 con la columna
+  *Variación* del libro de medidores.
+- **Qué se observó (evidencia negativa)**: el texto de la orden dice «Consumo +46,5%» y corresponde a
+  `evidence.change.change_pct = 46.517` (ventana sostenida); el libro muestra `+47,3 %` y corresponde
+  a `variation_pct = 47.27` (24 h contra baseline). Ambos valores salen de la misma respuesta de la API.
+- **Por qué no se confirma**: son dos medidas diferentes y ambas están documentadas
+  (`backend/README.md:110` define la variación del libro; `:319-325` describe el cambio sostenido). No
+  hay contradicción, sino dos ventanas distintas.
+
+### H3 · El total de paginación se calcula sobre la página (descartada)
+
+- **Qué se intentó**: comprobar si `count` reflejaba sólo las filas de la página en curso.
+- **Qué se observó (evidencia negativa)**: CN-06 pide `page: 99` y la respuesta es
+  `{"page":99,"size":10,"count":12,"rows":[]}`; `E2E-03` pide la página 2 y también recibe
+  `count: 12` con dos filas. El total es del conjunto completo (`backend/internal/httpx/paging.go:53`).
+- **Por qué no se confirma**: la hipótesis es falsa; se conserva aquí porque estaba en el tablero de
+  pendientes y su descarte es parte del resultado.
+
+### Divergencia confirmada fuera del registro · la búsqueda distingue mayúsculas
+
+- **Qué se observó**: `CN-07` busca `m-109` en el libro y obtiene 0 filas («Ningún medidor coincide
+  con los filtros»); la misma consulta a la API (`filter.meter_id: "m-109"`) responde `count: 0`.
+  El contrato publicado promete lo contrario: Swagger `/docs/openapi.json` documenta «Coincidencia
+  parcial y sin importar mayúsculas» y `backend/internal/meter/dto.go:27-30` lo repite.
+- **Por qué no se promovió a defecto**: el registro de defectos se cerró con seis casos reproducidos
+  antes de la fase de casos y este documento no se reabre en esta entrega. La divergencia queda
+  registrada en `qa/03-casos-caja-negra.md` (CN-07, `FALLA`) y en `qa/01-plan-de-pruebas.md` como
+  riesgo residual de R5, con la corrección sugerida: normalizar `filter.meter_id` en
+  `backend/internal/meter/dto.go:44` y comparar en mayúsculas en
+  `backend/internal/meter/service.go:59`.

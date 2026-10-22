@@ -168,3 +168,21 @@ que el requisito exige; el directorio `api/` queda sólo para los archivos por h
 4. Contrastar el resultado observado con el `Esperado` y su oráculo citado.
 
 ## Índice
+
+Una fila por archivo, con el hallazgo que demuestra y el documento que lo cita. Todo archivo listado
+existe en este directorio; ninguno se referencia sin estar en disco.
+
+| Archivo | Hallazgo que demuestra | Citado en |
+|---|---|---|
+| `BUG-01_status-counts-dashboard.png` | El KPI del despacho muestra `8 normales · 2 alerta · 2 críticas`, no `9/1/2` | `BUG-01`, `SM-04` |
+| `api/BUG-01_status-counts.md` | `GET /dashboard/getSummary` → `200` con `status_counts {normal:8, alert:2, critical:2}` | `BUG-01` |
+| `BUG-02_paginacion-sin-pagina-2.png` | `1–10 de 12 medidores` con `Siguiente` deshabilitado; M-111 y M-112 inalcanzables | `BUG-02`, `SM-05` |
+| `BUG-03_falso-positivo-fuera-de-normales.png` | Pestaña `Normales` activa con `1–8 de 8 medidores` y M-106 ausente | `BUG-03` |
+| `api/BUG-03_falso-positivo-fuera-de-normales.md` | `POST /meter/getAll` con `status: NORMAL` → `200`, `count: 8`, filas sin M-106 | `BUG-03` |
+| `api/BUG-04_page-negativo-500.md` | `POST /meter/getAll` con `page: -1` → `HTTP/1.1 500` y cuerpo de error interno | `BUG-04`, `CN-05` |
+| `BUG-05_ordenes-abiertas-vs-tarjetas.png` | «3 órdenes abiertas» sobre cuatro tarjetas de orden renderizadas | `BUG-05` |
+| `BUG-06_hora-de-planta-desfasada.png` | Celda «Detectada» de M-109 con `12/09 09:00` donde el oráculo pide `12/09 14:00` | `BUG-06`, `CN-15` |
+| `api/CN-02_sin-token.md` | `POST /meter/getAll` sin `Authorization` → `401` «Falta el token de autenticación» | `CN-02` |
+| `api/CN-04_pageSize-101.md` | `POST /meter/getAll` con `size: 101` → `400` con `errors[]` | `CN-04` |
+| `api/CN-13_retrigger-200.md` | Reintento mientras el análisis corre → `200` con el mismo `id` | `CN-13` |
+| `run.sh` | Regenera los seis curls de `api/`; obtiene el token en tiempo de ejecución y no lo imprime | `DEF-4`, `CN-02`, `CN-04`, `CN-13` |
