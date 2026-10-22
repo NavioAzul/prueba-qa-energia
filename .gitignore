@@ -11,3 +11,6 @@ dist
 *.tsbuildinfo
 frontend/.impeccable/review
 frontend/.impeccable/questions
+
+# Engram local project state (no se sube)
+.engram/
