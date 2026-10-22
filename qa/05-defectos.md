@@ -105,9 +105,128 @@ separan en la sección de hipótesis.
 - **Evidencia**: `qa/evidencias/api/BUG-04_page-negativo-500.md` · reproducible con
   `bash qa/evidencias/run.sh BUG-04`, que termina con código **1** e imprime la línea de estado `500`.
 - **Causa raíz probable**: `backend/internal/httpx/paging.go:23-36` — `Normalize` sólo valida `Size`,
-  nunca `Page`; y `paging.go:48` calcula `start = min((page-1)*size, len)`, que con `page = -1` es
+  nunca `Page`; y `backend/internal/httpx/paging.go:48` calcula `start = min((page-1)*size, len)`, que con `page = -1` es
   `-20`, produciendo el corte `items[-20:-10]` y el pánico. `httpx.Recover`
   (`backend/internal/httpx/middleware.go:48-53`) lo convierte en `500`.
 - **Detección automática**: tests unitarios propuestos #1 y #2 en `qa/04-caja-blanca.md`
   (`Paginate` no debe entrar en pánico con `page: -1`; `Normalize` debe rechazar `page: -1`), más la
   pierna de API opcional del suite E2E.
+
+### BUG-02 · La paginación del libro de medidores no tiene página 2
+
+- **Severidad**: `S2` — con 12 medidores y páginas de 10, el operador no puede ver M-111 ni M-112
+  desde el libro de medidores: dos medidores quedan fuera de la pantalla que existe para listarlos.
+  No hay pérdida de datos (la búsqueda directa los encuentra), pero la pantalla principal de consulta
+  oculta el 17 % del parque.
+- **Prioridad**: `P1` — la urgencia es inmediata: el defecto bloquea el acceso ordinario a dos
+  medidores y su corrección es un cambio de una línea (`Math.floor` → `Math.ceil`). Impacto alto con
+  coste mínimo.
+- **Entorno**: Chromium 156.0.8078.4 (Playwright) · macOS 26.5 · TZ America/Bogota · commit `15765d9`.
+- **Precondición**: sesión iniciada con la cuenta demo; sin filtros aplicados.
+- **Pasos**:
+  1. Abrir `http://localhost:3000/medidores`.
+  2. Leer el texto de rango y el estado del botón `Siguiente`.
+  3. Intentar llegar a `M-111` o `M-112` con los controles de paginación.
+- **Datos usados**: 12 medidores, `PAGE_SIZE = 10`.
+- **Esperado**: dos páginas con `Siguiente` habilitado en la primera, rango `1–10 de 12 medidores` y
+  acceso a `11–12 de 12`. Oráculo: `backend/README.md:80` (la lista "sin body devuelve la página 1 de
+  10" sobre 12 medidores documentados en `backend/README.md:24`), el texto que la propia UI imprime
+  (`1–10 de 12 medidores`) y el estándar de la industria: el número de páginas de una lista paginada
+  es `ceil(total / tamaño)`, no `floor`.
+- **Obtenido**: 10 filas (`M-101`…`M-110`), rango literal `1–10 de 12 medidores`, `Anterior`
+  deshabilitado y **`Siguiente` deshabilitado**. `M-111` y `M-112` no aparecen en ninguna página;
+  buscar `M-112` en el campo `Medidor` sí devuelve `1–1 de 1 medidores`, lo que prueba que el dato
+  existe y sólo la paginación lo oculta.
+- **Evidencia**: `qa/evidencias/BUG-02_paginacion-sin-pagina-2.png` (`1–10 de 12 medidores` con
+  `Siguiente` deshabilitado) · `qa/02-smoke.md` SM-05.
+- **Causa raíz probable**: `frontend/src/features/meters/components/Pagination.tsx:13` —
+  `const pages = Math.max(1, Math.floor(count / size))` calcula `floor(12 / 10) = 1` página, así que
+  `page >= pages` deshabilita `Siguiente` desde la primera página. La operación correcta es
+  `Math.ceil`.
+- **Detección automática**: E2E-01 en `e2e/tests/e2e-01-flujo-negocio.spec.ts` ya fija el contrato de
+  filas por página y el acceso a M-109; se propone añadir la aserción de que `Siguiente` está
+  habilitado y de que la segunda página contiene `M-111`/`M-112` cuando `count > size`.
+
+### BUG-05 · El despacho dice "3 órdenes abiertas" y muestra cuatro tarjetas
+
+- **Severidad**: `S3` — el contador y la lista que lo acompaña se contradicen en la misma pantalla.
+  El operador ve las cuatro órdenes y no pierde ninguna acción, pero el resumen de cabecera comunica
+  un estado de planta distinto del que muestra el cuerpo; el impacto es de confianza en el dato, no
+  de operación.
+- **Prioridad**: `P3` — es media: el defecto es visible y barato de corregir, pero no bloquea ninguna
+  tarea y la información completa ya está en pantalla. No se adelanta a los defectos que ocultan
+  datos o rompen la API.
+- **Entorno**: Chromium 156.0.8078.4 (Playwright) · macOS 26.5 · TZ America/Bogota · commit `15765d9`.
+- **Precondición**: sesión iniciada y dataset sin modificaciones.
+- **Pasos**:
+  1. Abrir `http://localhost:3000/`.
+  2. Leer la línea de descripción de la cabecera "Despacho".
+  3. Contar las tarjetas de orden renderizadas debajo.
+- **Datos usados**: 4 anomalías del motor, una de ellas `FALSE_POSITIVE` con `anomaly: false`.
+- **Esperado**: el contador debe coincidir con las tarjetas que describe: **4 órdenes**. Oráculo:
+  `backend/README.md:15` ("4 anomalías detectadas") y su tabla de 4 filas (`:17-22`), replicada en
+  `README.md:9-14`; la cuarta orden (M-106) es una orden emitida con acción "No escalar", no una
+  excepción. Decisión escrita: cuando un rótulo cuantifica una lista, ambos deben coincidir
+  (estándar de la industria; la documentación no define un "abierta" distinto de "emitida").
+- **Obtenido**: cabecera `3 órdenes abiertas, ordenadas por prioridad.` y **cuatro** tarjetas
+  renderizadas: `M-109`, `M-112`, `M-104`, `M-106` (la primera a doble escala, las otras tres
+  compactas).
+- **Evidencia**: `qa/evidencias/BUG-05_ordenes-abiertas-vs-tarjetas.png` (contador y cuatro tarjetas
+  en la misma captura) · `qa/02-smoke.md` SM-04/SM-08.
+- **Causa raíz probable**: `frontend/src/app/routes/DashboardRoute.tsx:32` —
+  `summary.data.priorities.filter((p) => p.anomaly).length` cuenta sólo las órdenes con
+  `anomaly: true` (3), mientras `:74-79` renderiza la orden líder y **todas** las de `rest` sobre
+  `summary.data.priorities` (4). El contador y la lista usan criterios distintos.
+- **Detección automática**: E2E de negocio: aserción de que el número del rótulo de cabecera es igual
+  al `count()` de las tarjetas de la sección de órdenes, con el valor de negocio `4`.
+
+### BUG-06 · La hora de planta se muestra en la zona del navegador
+
+- **Severidad**: `S2` — la columna "Detectada" y la cabecera de la orden muestran `12/09 09:00`
+  cuando la hora de planta documentada es `12/09 14:00`. Un operador que correlacione el evento con
+  registros de planta se desplaza 5 horas y puede descartar la ventana correcta; el impacto es
+  directo sobre el diagnóstico, no cosmético.
+- **Prioridad**: `P1` — inmediata: afecta a todas las marcas de tiempo de planta de la aplicación
+  (lista de anomalías, tarjetas de orden, libro y detalle) y la corrección es localizada en una sola
+  función. Además es el detector E2E elegido, porque su falla produce un par esperado/recibido
+  numérico que atribuye el defecto sin ambigüedad.
+- **Entorno**: Chromium 156.0.8078.4 (Playwright) · macOS 26.5 · TZ America/Bogota · commit `15765d9`.
+- **Precondición**: sesión iniciada; `timezoneId` del contexto = `America/Bogota`; viewport 1440×900
+  (por encima del corte `lg` que muestra la columna "Detectada").
+- **Pasos**:
+  1. Abrir `http://localhost:3000/anomalias`.
+  2. Localizar la fila de `M-109` y leer la celda "Detectada".
+  3. Recargar la página y repetir la lectura para comprobar estabilidad.
+- **Datos usados**: `detected_at` de M-109 = `2026-09-12T14:00:00Z` (API y `backend/README.md:28`).
+- **Esperado**: `12/09 14:00`. Oráculo: `backend/README.md:28` ("desde 12/09 14:00") y el contrato
+  escrito en el propio archivo del formateador: `frontend/src/lib/format.ts:51-52` declara que la
+  hora de planta "se lee en partes UTC para NO convertirla a la zona del navegador".
+- **Obtenido**: `12/09 09:00` — cinco horas menos — tanto en la celda "Detectada" de `/anomalias`
+  como en la cabecera "Detectada" de la orden de M-109 del tablero. La lectura fue idéntica en dos
+  cargas consecutivas (sin nondeterminismo de reloj o locale); las cuatro filas muestran el mismo
+  desplazamiento (`12/09 09:00`, `12/09 19:00`, `10/09 19:00`, `07/09 19:00` frente a los valores
+  UTC de la API).
+- **Evidencia**: `qa/evidencias/BUG-06_hora-de-planta-desfasada.png` (columna "Detectada" con
+  `12/09 09:00` para M-109) · `qa/02-smoke.md` SM-08 · spike de 30 minutos ejecutado antes de escribir
+  el test: celda visible a 1440×900, formato `dd/mm hh:mm`, texto `12/09 09:00`, estable en dos cargas.
+- **Causa raíz probable**: `frontend/src/lib/format.ts:57-58` — `formatPlantTime` usa
+  `getDate()/getMonth()/getHours()/getMinutes()` (partes locales) en lugar de las partes UTC. La
+  contraevidencia está en el mismo archivo: `formatPlantDate` (`:63`) sí usa
+  `getUTCDate()/getUTCMonth()`, y el comentario `:51-52` documenta la intención correcta; por eso es
+  un defecto y no una decisión de diseño.
+- **Detección automática**: test E2E marcado `test.fail(true, 'BUG-06 · …')` en
+  `e2e/tests/e2e-02-bug-06-zona-horaria.spec.ts`, con la aserción
+  `toHaveText('12/09 14:00')` sobre la celda de M-109; hoy falla con `Expected "12/09 14:00" /
+  Received "12/09 09:00"`.
+
+---
+
+## Decisión de informe: BUG-01 y BUG-03 se mantienen separados
+
+`BUG-01` (KPI del tablero en `8/2/2`) y `BUG-03` (el filtro `Normales` oculta M-106) comparten la
+misma causa raíz: `backend/internal/meter/enums.go:29-38` no tiene rama para `FALSE_POSITIVE`. Se
+conservan como **dos entradas** porque el síntoma observable, la pantalla afectada y el oráculo citado
+son distintos: un número agregado contra `backend/README.md:24` frente a una fila ausente contra
+`backend/README.md:105`. La causa compartida está declarada en ambas entradas, de modo que un revisor
+puede fusionarlas en una sola corrección sin perder información; fusionarlas en el informe habría
+ocultado que el mismo error produce dos fallas verificables en pantallas diferentes.
