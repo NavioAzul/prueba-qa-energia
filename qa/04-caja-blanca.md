@@ -139,30 +139,30 @@ enumeradas por archivo y línea:
 
 | Función | Líneas sin cubrir | Rama que queda sin ejercitar |
 |---|---|---|
-| `Pagination.Normalize` (`paging.go:23`) | `paging.go:23-25` | `if p.Page == 0` → valor por defecto |
-| | `paging.go:27-28` | `if p.Size == 0` → valor por defecto |
-| | `paging.go:31-33` | `if p.Size < 1 \|\| p.Size > MaxPageSize` → error de validación |
-| `Paginate` (`paging.go:47`) | `paging.go:47-55` | cálculo de `start`/`end`, página vacía y copia de filas |
-| `SortOrderOptions` (`paging.go:68`) | `paging.go:68-72` | construcción de las dos opciones |
-| `ParseSortOrder` (`paging.go:76`) | `paging.go:76,78,80,82` | casos `""`/`ASC`, `DESC` y `default` inválido |
-| `DecodeJSON` (`request.go:17`) | `request.go:17-23,25-26` | body vacío (`io.EOF`), JSON inválido y campo desconocido |
-| `WriteJSON` (`response.go:22`) | `response.go:22-27` | escritura y error de `Encode` |
-| `WriteError` (`response.go:32`) | `response.go:32-39` | armado del `APIError` |
-| `NotFound` (`response.go:43`) | `response.go:43-44` | 404 JSON |
-| `Chain` (`middleware.go:14`) | `middleware.go:14-16` | composición de middlewares |
-| `statusRecorder.WriteHeader` (`middleware.go:27`) | `middleware.go:27-29` | captura del status para el log |
-| `Logger` (`middleware.go:33`) | `middleware.go:33-43` | línea de log por petición |
-| `Recover` (`middleware.go:48`) | `middleware.go:48-53` | `recover()` + 500 genérico |
-| `CORS` (`middleware.go:61`) | `middleware.go:61-71,74-76` | origen permitido y preflight `OPTIONS` |
+| `Pagination.Normalize` (`backend/internal/httpx/paging.go:23`) | `backend/internal/httpx/paging.go:23-25` | `if p.Page == 0` → valor por defecto |
+| | `backend/internal/httpx/paging.go:27-28` | `if p.Size == 0` → valor por defecto |
+| | `backend/internal/httpx/paging.go:31-33` | `if p.Size < 1 \|\| p.Size > MaxPageSize` → error de validación |
+| `Paginate` (`backend/internal/httpx/paging.go:47`) | `backend/internal/httpx/paging.go:47-55` | cálculo de `start`/`end`, página vacía y copia de filas |
+| `SortOrderOptions` (`backend/internal/httpx/paging.go:68`) | `backend/internal/httpx/paging.go:68-72` | construcción de las dos opciones |
+| `ParseSortOrder` (`backend/internal/httpx/paging.go:76`) | `backend/internal/httpx/paging.go:76,78,80,82` | casos `""`/`ASC`, `DESC` y `default` inválido |
+| `DecodeJSON` (`backend/internal/httpx/request.go:17`) | `backend/internal/httpx/request.go:17-23,25-26` | body vacío (`io.EOF`), JSON inválido y campo desconocido |
+| `WriteJSON` (`backend/internal/httpx/response.go:22`) | `backend/internal/httpx/response.go:22-27` | escritura y error de `Encode` |
+| `WriteError` (`backend/internal/httpx/response.go:32`) | `backend/internal/httpx/response.go:32-39` | armado del `APIError` |
+| `NotFound` (`backend/internal/httpx/response.go:43`) | `backend/internal/httpx/response.go:43-44` | 404 JSON |
+| `Chain` (`backend/internal/httpx/middleware.go:14`) | `backend/internal/httpx/middleware.go:14-16` | composición de middlewares |
+| `statusRecorder.WriteHeader` (`backend/internal/httpx/middleware.go:27`) | `backend/internal/httpx/middleware.go:27-29` | captura del status para el log |
+| `Logger` (`backend/internal/httpx/middleware.go:33`) | `backend/internal/httpx/middleware.go:33-43` | línea de log por petición |
+| `Recover` (`backend/internal/httpx/middleware.go:48`) | `backend/internal/httpx/middleware.go:48-53` | `recover()` + 500 genérico |
+| `CORS` (`backend/internal/httpx/middleware.go:61`) | `backend/internal/httpx/middleware.go:61-71,74-76` | origen permitido y preflight `OPTIONS` |
 
 Dos consecuencias concretas:
 
 1. **`Normalize` valida `Size` y nunca `Page`.** La estructura declara `minimum:"1"` en
-   `paging.go:18`, pero la única validación es la de `Size` (`paging.go:32`). Un `page` negativo cruza
+   `backend/internal/httpx/paging.go:18`, pero la única validación es la de `Size` (`backend/internal/httpx/paging.go:32`). Un `page` negativo cruza
    la validación y llega a `Paginate`.
-2. **`Paginate` es la función que convierte esa entrada en un 500.** En `paging.go:48`,
-   `start = min((Page-1)*Size, len(items))`; con `Page = -1` y `Size = 10` da `-20`, y `paging.go:54`
-   corta `items[-20:-10]`, que entra en pánico. `Recover` (`middleware.go:48`) lo convierte en
+2. **`Paginate` es la función que convierte esa entrada en un 500.** En `backend/internal/httpx/paging.go:48`,
+   `start = min((Page-1)*Size, len(items))`; con `Page = -1` y `Size = 10` da `-20`, y `backend/internal/httpx/paging.go:54`
+   corta `items[-20:-10]`, que entra en pánico. `Recover` (`backend/internal/httpx/middleware.go:48`) lo convierte en
    `500 «Error interno del servidor»`, que es exactamente lo que devuelve la API (BUG-04).
 
 ## 5. CB-02 · `internal/meter` — 79.6 % de sentencias
@@ -172,12 +172,12 @@ lección. Cobertura por archivo, leída de la anotación HTML:
 
 | Archivo | Cobertura | Líneas sin cubrir |
 |---|---|---|
-| `meter/enums.go` | **100.0 %** | ninguna |
-| `meter/service.go` | 91.9 % | `service.go:28-38` (`Params`, la única función del servicio sin test) |
-| `meter/dto.go` | 94.4 % | `dto.go:45-46` (error de `filter.meter_id` demasiado largo) |
-| `meter/handler.go` | 0.0 % | `handler.go:15-16,29-30,48-56,74-78` (los cuatro handlers HTTP) |
+| `backend/internal/meter/enums.go` | **100.0 %** | ninguna |
+| `backend/internal/meter/service.go` | 91.9 % | `backend/internal/meter/service.go:28-38` (`Params`, la única función del servicio sin test) |
+| `backend/internal/meter/dto.go` | 94.4 % | `backend/internal/meter/dto.go:45-46` (error de `filter.meter_id` demasiado largo) |
+| `backend/internal/meter/handler.go` | 0.0 % | `backend/internal/meter/handler.go:15-16,29-30,48-56,74-78` (los cuatro handlers HTTP) |
 
-**El hallazgo con peso**: `StatusOf` (`enums.go:29-38`) está al **100 % de cobertura de sentencias y
+**El hallazgo con peso**: `StatusOf` (`backend/internal/meter/enums.go:29-38`) está al **100 % de cobertura de sentencias y
 es incorrecto**:
 
 ```go
@@ -193,7 +193,7 @@ func StatusOf(a *model.Anomaly) Status {
 }
 ```
 
-Su propio comentario (`enums.go:25-28`) promete «sin anomalía, o falso positivo (el motor dice "no
+Su propio comentario (`backend/internal/meter/enums.go:25-28`) promete «sin anomalía, o falso positivo (el motor dice "no
 escalar"): NORMAL». La rama que implementaría esa promesa **no existe**: un `FALSE_POSITIVE` de
 severidad `LOW` cae en `default` y se devuelve `ALERT`. Las tres ramas del `switch` están ejecutadas
 por los tests, así que no hay una sola sentencia sin cubrir que delate el problema. Es la
@@ -201,8 +201,8 @@ demostración de que «la suite está en verde» y «el comportamiento es correc
 independientes: la cobertura de sentencias es **estructuralmente incapaz** de detectar una rama que
 falta.
 
-El mismo patrón aparece en `dto.go:27-30`, que documenta la búsqueda como «coincidencia parcial y sin
-importar mayúsculas», mientras `service.go:59` compara con `strings.Contains(sm.MeterID, search)` sin
+El mismo patrón aparece en `backend/internal/meter/dto.go:27-30`, que documenta la búsqueda como «coincidencia parcial y sin
+importar mayúsculas», mientras `backend/internal/meter/service.go:59` compara con `strings.Contains(sm.MeterID, search)` sin
 normalizar. La línea que debería normalizar no existe, y por eso el caso CN-07 encuentra 0 filas
 donde el contrato promete 1. Se registra aquí como rama ausente (no como línea sin cubrir): ninguna
 métrica de cobertura puede señalarla.
@@ -292,7 +292,7 @@ func TestPaginateConPaginaNegativaNoEntraEnPanico(t *testing.T) {
 ```
 
 **Qué afirma**: una página negativa se normaliza y el resultado conserva el total sin paginar.
-**Por qué falla hoy**: `paging.go:48` calcula `start = min(-20, 3) = -20` y `paging.go:54` evalúa
+**Por qué falla hoy**: `backend/internal/httpx/paging.go:48` calcula `start = min(-20, 3) = -20` y `backend/internal/httpx/paging.go:54` evalúa
 `items[-20:-10]`; la función entra en pánico antes de devolver nada, y en la API ese pánico se
 convierte en `500` (BUG-04).
 
@@ -311,9 +311,9 @@ func TestNormalizeRechazaPaginaNegativa(t *testing.T) {
 ```
 
 **Qué afirma**: la validación del body cubre `page` igual que cubre `size`.
-**Por qué falla hoy**: `paging.go:23-35` sólo valida `Size`; con `page: -1` y `size: 10` devuelve una
+**Por qué falla hoy**: `backend/internal/httpx/paging.go:23-35` sólo valida `Size`; con `page: -1` y `size: 10` devuelve una
 lista de errores vacía y el valor negativo sigue de largo hasta `Paginate`. La estructura declara
-`minimum:"1"` en `paging.go:18`, pero ningún código lo hace cumplir.
+`minimum:"1"` en `backend/internal/httpx/paging.go:18`, pero ningún código lo hace cumplir.
 
 ### Propuesta 3 · `StatusOf` debe devolver `NORMAL` para un falso positivo
 
@@ -331,9 +331,9 @@ func TestStatusOfFalsoPositivoEsNormal(t *testing.T) {
 }
 ```
 
-**Qué afirma**: la primera línea del contrato documentado en `enums.go:25-28` y en
+**Qué afirma**: la primera línea del contrato documentado en `backend/internal/meter/enums.go:25-28` y en
 `backend/README.md:105-107`.
-**Por qué falla hoy**: `enums.go:29-38` no tiene caso para `FALSE_POSITIVE`; el valor cae en
+**Por qué falla hoy**: `backend/internal/meter/enums.go:29-38` no tiene caso para `FALSE_POSITIVE`; el valor cae en
 `default` y devuelve `ALERT`. Esta es la prueba de que el 100 % de cobertura de `StatusOf` no protege
 nada: el test que falta no es un test de una línea existente, es el test de una rama inexistente.
 
@@ -346,8 +346,8 @@ it('lee las partes UTC y no la zona del navegador', () => {
 })
 ```
 
-**Qué afirma**: la hora de planta se lee en UTC, como declara el comentario de `format.ts:51-52`.
-**Por qué no falla hoy y sí en producción**: `format.ts:57-58` usa `getDate()/getHours()/getMinutes()`
+**Qué afirma**: la hora de planta se lee en UTC, como declara el comentario de `frontend/src/lib/format.ts:51-52`.
+**Por qué no falla hoy y sí en producción**: `frontend/src/lib/format.ts:57-58` usa `getDate()/getHours()/getMinutes()`
 en vez de las variantes `getUTC*` que el mismo archivo usa en `:63`; el resultado correcto depende de
 la zona del proceso. Con `env: { TZ: 'UTC' }` (`frontend/vite.config.ts:33`) el test pasa; ejecutado
 bajo `TZ=America/Bogota` devuelve `12/09 09:00` y falla. La corrección del test es inseparable de la
