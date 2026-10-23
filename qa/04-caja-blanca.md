@@ -74,108 +74,117 @@ lo que sigue explica por qué eso no equivale a decir que el comportamiento es c
 
 ## 3. Cobertura de sentencias
 
-`-coverprofile` necesita escritura, así que se copió `backend/` a `/tmp` (nunca se escribió el perfil
-dentro del repositorio) y se montó ese directorio en lectura/escritura:
+Se hicieron dos mediciones, porque responden preguntas distintas. Ambas sobre una copia de `backend/`
+en `/tmp/qa-backend-cov`, nunca dentro del repositorio.
+
+### 3.1 Con los tests propios de cada paquete
+
+`go test -coverprofile` sin `-coverpkg` sólo cuenta lo que ejecutan los tests del propio paquete:
+
+| Paquete | Cobertura con tests propios |
+|---|---|
+| `internal/httpx` | 0.0 % (sin archivos de test) |
+| `internal/meter` | 79.6 % |
+| `internal/dashboard` | 0.0 % (sin archivos de test) |
+| Total de los tres paquetes (ponderado por sentencias) | 42.3 % |
+
+Esta cifra **no es la cobertura del backend**: suma tres paquetes y descarta lo que otros paquetes
+ejecutan de ellos. Sirve para una sola cosa: `httpx` y `dashboard` no tienen tests propios.
+
+### 3.2 Con toda la suite sobre todo el backend
 
 ```bash
-cp -R backend /tmp/qa-backend-cov
 docker run --rm -e GOFLAGS=-mod=readonly -v /tmp/qa-backend-cov:/src -w /src golang:1.26-alpine sh -c \
-  'go test -coverprofile=/tmp/cov.out ./internal/httpx/... ./internal/meter/... ./internal/dashboard/... &&
-   go tool cover -func=/tmp/cov.out'
+  'go test -coverpkg=./... -coverprofile=/src/cov.out ./... >/dev/null && go tool cover -func=/src/cov.out | tail -1'
 ```
 
 ```text
-	energyai/internal/httpx		coverage: 0.0% of statements
-ok  	energyai/internal/meter	0.205s	coverage: 79.6% of statements
-	energyai/internal/dashboard		coverage: 0.0% of statements
---- cover -func ---
-energyai/internal/dashboard/handler.go:15:	NewHandler		0.0%
-energyai/internal/dashboard/handler.go:29:	GetSummary		0.0%
-energyai/internal/dashboard/service.go:21:	NewService		0.0%
-energyai/internal/dashboard/service.go:26:	Summary			0.0%
-energyai/internal/httpx/middleware.go:14:	Chain			0.0%
-energyai/internal/httpx/middleware.go:27:	WriteHeader		0.0%
-energyai/internal/httpx/middleware.go:33:	Logger			0.0%
-energyai/internal/httpx/middleware.go:48:	Recover			0.0%
-energyai/internal/httpx/middleware.go:61:	CORS			0.0%
-energyai/internal/httpx/paging.go:23:		Normalize		0.0%
-energyai/internal/httpx/paging.go:47:		Paginate		0.0%
-energyai/internal/httpx/paging.go:68:		SortOrderOptions	0.0%
-energyai/internal/httpx/paging.go:76:		ParseSortOrder		0.0%
-energyai/internal/httpx/request.go:17:		DecodeJSON		0.0%
-energyai/internal/httpx/response.go:22:		WriteJSON		0.0%
-energyai/internal/httpx/response.go:32:		WriteError		0.0%
-energyai/internal/httpx/response.go:43:		NotFound		0.0%
-energyai/internal/meter/dto.go:40:		Normalize		94.4%
-energyai/internal/meter/enums.go:29:		StatusOf		100.0%
-energyai/internal/meter/enums.go:60:		isOption		100.0%
-energyai/internal/meter/handler.go:15:		NewHandler		0.0%
-energyai/internal/meter/handler.go:29:		GetParams		0.0%
-energyai/internal/meter/handler.go:48:		GetAll			0.0%
-energyai/internal/meter/handler.go:74:		GetByID			0.0%
-energyai/internal/meter/service.go:23:		NewService		100.0%
-energyai/internal/meter/service.go:28:		Params			0.0%
-energyai/internal/meter/service.go:43:		Summaries		100.0%
-energyai/internal/meter/service.go:53:		GetAll			100.0%
-energyai/internal/meter/service.go:73:		GetByID			100.0%
-energyai/internal/meter/service.go:96:		summarize		100.0%
-energyai/internal/meter/service.go:116:		sortSummaries		100.0%
-energyai/internal/meter/service.go:137:		severityRank		100.0%
-energyai/internal/meter/service.go:144:		metric			100.0%
-energyai/internal/meter/service.go:152:		hourlyHistory		100.0%
-energyai/internal/meter/service.go:168:		dailyHistory		100.0%
-total:						(statements)		42.3%
+total:							(statements)		79.3%
 ```
 
-Para localizar las ramas sin cubrir se generó la anotación HTML del mismo perfil
-(`go tool cover -html`) y se leyeron las líneas marcadas sin cubrir. Esas líneas son las que se citan
-en CB-01 y CB-02.
+**La cobertura total de sentencias del backend es 79.3 %.** Incluye paquetes sin test como `cmd/api`,
+`cmd/inspect` y `docs`, que la bajan aunque su lógica sea un `main` de arranque.
 
-## 4. CB-01 · `internal/httpx` — 0.0 % de sentencias
+De las 13 funciones de `httpx`, 7 llegan al 100 %. Las otras seis: `SortOrderOptions` y `NotFound` en
+0 %, `CORS` en 42,9 %, `Recover` en 66,7 %, `DecodeJSON` y `WriteJSON` en 75 %. `Normalize` y
+`Paginate` están al 100 % y BUG-04 sigue ahí.
 
-El paquete que construye **todas** las respuestas de la API no tiene ningún archivo de test
-(`energyai/internal/httpx [no test files]`). Su cobertura no es baja: es cero. Ramas sin cubrir,
-enumeradas por archivo y línea:
+<details>
+<summary>Salida cruda de <code>go tool cover -func</code> para <code>internal/httpx</code></summary>
 
-| Función | Líneas sin cubrir | Rama que queda sin ejercitar |
-|---|---|---|
-| `Pagination.Normalize` (`backend/internal/httpx/paging.go:23`) | `backend/internal/httpx/paging.go:23-25` | `if p.Page == 0` → valor por defecto |
-| | `backend/internal/httpx/paging.go:27-28` | `if p.Size == 0` → valor por defecto |
-| | `backend/internal/httpx/paging.go:31-33` | `if p.Size < 1 \|\| p.Size > MaxPageSize` → error de validación |
-| `Paginate` (`backend/internal/httpx/paging.go:47`) | `backend/internal/httpx/paging.go:47-55` | cálculo de `start`/`end`, página vacía y copia de filas |
-| `SortOrderOptions` (`backend/internal/httpx/paging.go:68`) | `backend/internal/httpx/paging.go:68-72` | construcción de las dos opciones |
-| `ParseSortOrder` (`backend/internal/httpx/paging.go:76`) | `backend/internal/httpx/paging.go:76,78,80,82` | casos `""`/`ASC`, `DESC` y `default` inválido |
-| `DecodeJSON` (`backend/internal/httpx/request.go:17`) | `backend/internal/httpx/request.go:17-23,25-26` | body vacío (`io.EOF`), JSON inválido y campo desconocido |
-| `WriteJSON` (`backend/internal/httpx/response.go:22`) | `backend/internal/httpx/response.go:22-27` | escritura y error de `Encode` |
-| `WriteError` (`backend/internal/httpx/response.go:32`) | `backend/internal/httpx/response.go:32-39` | armado del `APIError` |
-| `NotFound` (`backend/internal/httpx/response.go:43`) | `backend/internal/httpx/response.go:43-44` | 404 JSON |
-| `Chain` (`backend/internal/httpx/middleware.go:14`) | `backend/internal/httpx/middleware.go:14-16` | composición de middlewares |
-| `statusRecorder.WriteHeader` (`backend/internal/httpx/middleware.go:27`) | `backend/internal/httpx/middleware.go:27-29` | captura del status para el log |
-| `Logger` (`backend/internal/httpx/middleware.go:33`) | `backend/internal/httpx/middleware.go:33-43` | línea de log por petición |
-| `Recover` (`backend/internal/httpx/middleware.go:48`) | `backend/internal/httpx/middleware.go:48-53` | `recover()` + 500 genérico |
-| `CORS` (`backend/internal/httpx/middleware.go:61`) | `backend/internal/httpx/middleware.go:61-71,74-76` | origen permitido y preflight `OPTIONS` |
+```text
+energyai/internal/httpx/middleware.go:14:		Chain			100.0%
+energyai/internal/httpx/middleware.go:27:		WriteHeader		100.0%
+energyai/internal/httpx/middleware.go:33:		Logger			100.0%
+energyai/internal/httpx/middleware.go:48:		Recover			66.7%
+energyai/internal/httpx/middleware.go:61:		CORS			42.9%
+energyai/internal/httpx/paging.go:23:			Normalize		100.0%
+energyai/internal/httpx/paging.go:47:			Paginate		100.0%
+energyai/internal/httpx/paging.go:68:			SortOrderOptions	0.0%
+energyai/internal/httpx/paging.go:76:			ParseSortOrder		100.0%
+energyai/internal/httpx/request.go:17:			DecodeJSON		75.0%
+energyai/internal/httpx/response.go:22:			WriteJSON		75.0%
+energyai/internal/httpx/response.go:32:			WriteError		100.0%
+energyai/internal/httpx/response.go:43:			NotFound		0.0%
+```
 
-Dos consecuencias concretas:
+</details>
+
+## 4. CB-01 · `internal/httpx` — sin tests propios, y aun así con el defecto de BUG-04
+
+El paquete que construye las respuestas de la API no tiene archivos de test
+(`energyai/internal/httpx [no test files]`). Sus funciones se ejecutan **indirectamente**, a través de
+los tests de `internal/server`, y la mayoría queda al 100 %. Las dos que no llegan, y que explican el
+defecto:
+
+- **`Recover`** (`backend/internal/httpx/middleware.go:48`): las líneas `middleware.go:52-53`
+  (`slog.Error` y `WriteError`) no se ejecutan en ninguna corrida — su bloque en el perfil
+  (`51:36-54:5`) tiene conteo **0**. La suite sólo atraviesa el camino sin pánico. El `500` de BUG-04 lo
+  produce la aplicación en vivo, no un test: el mecanismo que convierte el pánico en una respuesta
+  presentable es justamente el que nadie prueba.
+- **`CORS`** (`backend/internal/httpx/middleware.go:61`): quedan sin ejecutar `middleware.go:66-71`
+  (cabeceras de origen permitido, bloque `65:105-72:5`) y `middleware.go:75-76` (`WriteHeader(204)` y
+  `return` del preflight `OPTIONS`, bloque `74:38-77:5`). Ningún test envía un origen cruzado ni un
+  `OPTIONS`.
+
+El hallazgo importante es el contrario: **`Normalize` y `Paginate` están al 100 % de cobertura y BUG-04
+sigue ahí.**
 
 1. **`Normalize` valida `Size` y nunca `Page`.** La estructura declara `minimum:"1"` en
-   `backend/internal/httpx/paging.go:18`, pero la única validación es la de `Size` (`backend/internal/httpx/paging.go:32`). Un `page` negativo cruza
-   la validación y llega a `Paginate`.
-2. **`Paginate` es la función que convierte esa entrada en un 500.** En `backend/internal/httpx/paging.go:48`,
-   `start = min((Page-1)*Size, len(items))`; con `Page = -1` y `Size = 10` da `-20`, y `backend/internal/httpx/paging.go:54`
-   corta `items[-20:-10]`, que entra en pánico. `Recover` (`backend/internal/httpx/middleware.go:48`) lo convierte en
+   `backend/internal/httpx/paging.go:18`, pero la única validación es la de `Size`
+   (`backend/internal/httpx/paging.go:32`). Un `page` negativo cruza la validación y llega a `Paginate`.
+2. **`Paginate` es la función que convierte esa entrada en un 500.** En
+   `backend/internal/httpx/paging.go:48`, `start = min((Page-1)*Size, len(items))`; con `Page = -1` y
+   `Size = 10` da `-20`, y `backend/internal/httpx/paging.go:54` corta `items[-20:-10]`, que entra en
+   pánico. `Recover` (`backend/internal/httpx/middleware.go:48`) lo convierte en
    `500 «Error interno del servidor»`, que es exactamente lo que devuelve la API (BUG-04).
+
+Por qué el 100 % no lo detecta: el cuerpo de `Paginate` es un único bloque de sentencias en línea recta
+(`paging.go:47-56`), así que cualquier llamada con una página válida lo marca como cubierto. La
+cobertura de sentencias no puede señalar una validación que no existe ni una entrada que ningún test
+envía. Y como la suite está en verde mientras la API responde 500 a `page = -1`, ningún test afirma una
+respuesta correcta para esa entrada: si lo hiciera, la suite fallaría.
+
+Es el mismo patrón que `StatusOf` (sección 5): `StatusOf`, `Normalize` y `Paginate` están al 100 %, y el
+resumen del tablero (`dashboard.GetSummary`, también al 100 %) devuelve 8/2/2 en lugar de 9/1/2. La
+cobertura mide qué líneas se ejecutaron, no qué preguntas respondió el test.
 
 ## 5. CB-02 · `internal/meter` — 79.6 % de sentencias
 
 El paquete que deriva el estado que ve el operador está mejor cubierto, y esa es justamente la
 lección. Cobertura por archivo, leída de la anotación HTML:
 
+Cifras de la corrida completa (`-coverpkg=./...`), por archivo:
+
 | Archivo | Cobertura | Líneas sin cubrir |
 |---|---|---|
 | `backend/internal/meter/enums.go` | **100.0 %** | ninguna |
 | `backend/internal/meter/service.go` | 91.9 % | `backend/internal/meter/service.go:28-38` (`Params`, la única función del servicio sin test) |
 | `backend/internal/meter/dto.go` | 94.4 % | `backend/internal/meter/dto.go:45-46` (error de `filter.meter_id` demasiado largo) |
-| `backend/internal/meter/handler.go` | 0.0 % | `backend/internal/meter/handler.go:15-16,29-30,48-56,74-78` (los cuatro handlers HTTP) |
+| `backend/internal/meter/handler.go` | 73.3 % | `handler.go:29-31` (`GetParams`), `handler.go:50-53` (rama 400 de `GetAll`) y `handler.go:80` (404 de `GetByID`) |
+
+Que la **rama 400 de `GetAll`** no se ejecute es la razón de fondo por la que la validación faltante de
+`page` nunca se notó: el único camino que devuelve `400` por filtros inválidos no tiene un solo test.
 
 **El hallazgo con peso**: `StatusOf` (`backend/internal/meter/enums.go:29-38`) está al **100 % de cobertura de sentencias y
 es incorrecto**:

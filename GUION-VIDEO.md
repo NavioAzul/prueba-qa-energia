@@ -118,9 +118,14 @@
 
 > "Revisé dos módulos de riesgo.
 >
-> La cobertura total del backend es **42,3%**. `httpx` está en **0%**, `meter` en 79,6% y `dashboard` en 0%. `httpx` es justamente donde vive el defecto del 500: el paquete que valida la paginación no tiene un solo test.
+> La suite cubre **79,3%** del backend: un número alto, y aun así hay tres defectos S2/P1 y un test que
+> afirma el comportamiento equivocado. `httpx`, donde vive el defecto del 500, no tiene archivos de test
+> propios: lo ejercitan los tests del servidor, y `Normalize` y `Paginate` están al 100%, pero ninguno
+> afirma qué pasa con una página inválida.
 >
-> El caso más interesante es otro. La función `StatusOf` tiene **100% de cobertura de sentencias y es incorrecta**. La cobertura mide líneas ejecutadas, no ramas de negocio ejercitadas. Ese es el punto que quiero dejar: el número no es la calidad; la calidad es qué preguntas responde el test.
+> El caso más interesante es otro. La función `StatusOf` tiene **100% de cobertura de sentencias y es
+> incorrecta**. La cobertura mide líneas ejecutadas, no ramas de negocio ejercitadas. Ese es el punto
+> que quiero dejar: el número no es la calidad; la calidad es qué preguntas responde el test.
 >
 > Por eso mi veredicto sobre las suites existentes. El backend es **parcialmente confiable**: valida contratos, pero codifica el bug en `server_test.go:131`. El frontend **no es confiable para fechas**, porque `vite.config.ts` fija `TZ=UTC`, justo la zona que esconde el defecto de zona horaria.
 >
